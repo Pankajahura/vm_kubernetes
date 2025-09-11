@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "worker:dev": "ts-node --project tsconfig.worker.json worker/index.ts",
+    "worker2:dev": "ts-node --project tsconfig.worker.json worker2/index.ts",
     "test:dev": "ts-node --project tsconfig.worker.json worker/index.ts",
     "worker:build": "tsc -p tsconfig.worker.json",
     "worker:start": "node dist/worker/index.js"
@@ -19,7 +20,8 @@
     "ioredis": "^5.7.0",
     "next": "15.5.2",
     "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "react-dom": "19.1.0",
+    "zod": "^4.1.7"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

@@ -63,6 +63,23 @@ const processor = async (job: Job) => {
     POD_CIDR,
     K8S_MINOR,
   });
+
+
+
+
+  // 3) kubeadm init on control plane
+  console.log(`[init] kubeadm init on ${cp.ip}`);
+  await withTimeout(
+    kubeadmInit(cp.ip, SSH_USER, SSH_KEY_PATH, POD_CIDR),
+    10 * 60_000,
+    "kubeadm init"
+  );
+  console.log("[init] done");
+
+  // 4) Install CNI
+  console.log("[cni] install calico");
+  await withTimeout(installCalico(cp.ip, SSH_USER, SSH_KEY_PATH), 3 * 60_000, "calico");
+  console.log("[cni] done");
   console.log("[job] received", { id: job.id, name, cpu, ramMb, workerCount, nodes });
 // 5) Get join command
   console.log("[join] getting join command");

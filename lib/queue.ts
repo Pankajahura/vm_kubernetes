@@ -1,17 +1,16 @@
 // lib/queue.ts
 import { Queue } from "bullmq";
 import IORedis from "ioredis";
-import "dotenv/config";
 
-const connection = new IORedis({
-host: "159.65.154.159",
-  port: 6379,
- password: "Pankajsoni1155@",
- maxRetriesPerRequest: null,
+export const redis = new IORedis(process.env.REDIS_URL!, {
+  maxRetriesPerRequest: null,
+  enableReadyCheck: false,
 });
 
-export const provisionQueue = new Queue("cluster", { connection });
-
-
-//api-->queue--->
-
+const g = globalThis as any;
+export const provisionQueue: Queue =
+  g.__provisionQueue ||
+  (g.__provisionQueue = new Queue(process.env.QUEUE_NAME ?? "provision-queue", {
+    connection: redis,
+    defaultJobOptions: { removeOnComplete: true, attempts: 1 },
+  }));

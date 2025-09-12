@@ -29,7 +29,7 @@ const Payload = z.object({
     name: z.string(),                              // e.g. "ahura-01"
     location: z.string(),                          // e.g. "mumbai"
     pod_cidr: z.string().default("10.244.0.0/16"),
-    k8s_minor: z.string().default("v1.31")
+    k8s_minor: z.number().default(1.31)
   }),
   auth: Auth,
   nodes: z.record(z.string(), NodeSpec)            // {"cp-1":{...}, "w-1":{...}}

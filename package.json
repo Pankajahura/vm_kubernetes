@@ -9,6 +9,7 @@
     "lint": "eslint",
     "worker:dev": "ts-node --project tsconfig.worker.json worker/index.ts",
     "worker2:dev": "ts-node --project tsconfig.worker.json worker2/index.ts",
+     "worker3:dev": "ts-node --project tsconfig.worker.json worker3/index.ts",
     "test:dev": "ts-node --project tsconfig.worker.json worker/index.ts",
     "worker:build": "tsc -p tsconfig.worker.json",
     "worker:start": "node dist/worker/index.js"

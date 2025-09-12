@@ -12,7 +12,7 @@ const execFileAsync = promisify(execFile);
 const REDIS_URL = process.env.REDIS_URL!;
 const QUEUE_NAME = process.env.QUEUE_NAME || "provision-queue";
 const POD_CIDR_DEFAULT = process.env.POD_CIDR || "10.244.0.0/16";
-const K8S_MINOR_DEFAULT = process.env.K8S_MINOR || "v1.31";
+const K8S_MINOR_DEFAULT = process.env.K8S_MINOR || 1.31;
 const KUBECONFIG_DIR = process.env.KUBECONFIG_DIR || "/srv/kubeconfigs";
 const CALICO_URL = process.env.CALICO_URL ||
   "https://raw.githubusercontent.com/projectcalico/calico/v3.28.0/manifests/calico.yaml";
@@ -38,10 +38,8 @@ const connection = new IORedis(REDIS_URL, { maxRetriesPerRequest: null, enableRe
 // ---------- SSH helpers ----------
 function sshBaseArgs(auth: Auth, host: string) {
   const common = [
-    "-o", "BatchMode=yes",
     "-o", "StrictHostKeyChecking=no",
-    "-o", "UserKnownHostsFile=/dev/null",
-    "-o", "ConnectTimeout=10"
+    "-o", "PreferredAuthentications=keyboard-interactive,password"
   ];
   const dest = `${auth.user}@${host}`;
   if (auth.method === "password") {
@@ -57,7 +55,7 @@ function sshBaseArgs(auth: Auth, host: string) {
 
 async function sshExec(auth: Auth, host: string, cmd: string, label?: string) {
   const { bin, args } = sshBaseArgs(auth, host);
-  const all = [...args, "bash", "-lc", cmd];
+  const all = [...args, "bash", "-lc",sudoWrap(auth, `hostnamectl set-hostname root`), cmd];
   const { stdout, stderr } = await execFileAsync(bin, all, { encoding: "utf8" });
   if (stderr?.trim()) console.warn(`[ssh:${label ?? host} stderr]`, stderr.trim());
   return stdout.trim();
@@ -99,11 +97,18 @@ echo "$HN $CPU $MEM"`);
 function sudoWrap(auth: Auth, raw: string) {
   // root user: no sudo needed
   if (auth.user === "root") return raw;
+  
+  const inner = `bash -lc ${JSON.stringify(raw)}`;
+  if (auth.method === "password") {
+    const pw = (auth.password).replace(/'/g, `'\\''`);
+    return `set -e; echo '${pw}' | sudo -S -p '' ${inner}`;
+  }
 
   // most cloud images have passwordless sudo for 'ubuntu' (NOPASSWD), so plain sudo works.
   // If your user requires a sudo password, enable the next line by piping the password:
   // return `set -e; echo '${(auth as any).password ?? ""}' | sudo -S -p '' bash -lc ${JSON.stringify(raw)}`;
-  return `sudo bash -lc ${JSON.stringify(raw)}`;
+  //return `sudo bash -lc ${JSON.stringify(raw)}`;
+	 return `sudo ${inner}`;
 }
 
 // ---------- Provision steps ----------

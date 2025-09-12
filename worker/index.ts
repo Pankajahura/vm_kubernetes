@@ -27,7 +27,7 @@ const SSH_KEY_PATH =
   process.env.SSH_KEY_PATH ||
   (process.env.HOME ? `${process.env.HOME}/.ssh/id_ed25519` : "/root/.ssh/id_ed25519");
 const POD_CIDR = process.env.POD_CIDR || "192.168.0.0/16";
-const K8S_MINOR = process.env.K8S_MINOR || "v1.31";
+const K8S_MINOR = process.env.K8S_MINOR || 1.31;
 
 type NodeSpec = { ip: string; role: "control-plane" | "worker" };
 
@@ -62,6 +62,7 @@ const processor = async (job: Job) => {
     KUBECONFIG_DIR,
     POD_CIDR,
     K8S_MINOR,
+    typeOf(K8S_MINOR),".......checking kbs minor type.."
   });
 
 

@@ -374,13 +374,13 @@ const processor = async (job: Job) => {
   const jobSeries = toSeries(data.cluster.k8s_minor ?? K8S_SERIES);
   const kubeadmVersion = toKubeadmVersion(jobSeries, undefined /* or allow pin via payload */);
 
-  console.log("[job] starting", {
-    id: job.id,
-    clusterId,
-    nodes: Object.keys(data.nodes).length,
-    series: jobSeries,
-    kubeadmVersion,
-  });
+  // console.log("[job] starting", {
+  //   id: job.id,
+  //   clusterId,
+  //   nodes: Object.keys(data.nodes).length,
+  //   series: jobSeries,
+  //   kubeadmVersion,
+  // });
 
   const nodes = Object.values(data.nodes);
   console.log(nodes,".............nodes");
@@ -397,7 +397,7 @@ const processor = async (job: Job) => {
         sudoWrap(data.auth, `hostnamectl set-hostname -- ${JSON.stringify(n.hostname)}`),
         "set-hostname"
       );
-      console.log("hostname is set successful for -",n.hostname);
+      //console.log("hostname is set successful for -",n.hostname);
     }
   }
 

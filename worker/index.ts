@@ -62,7 +62,7 @@ const processor = async (job: Job) => {
     KUBECONFIG_DIR,
     POD_CIDR,
     K8S_MINOR,
-    typeOf(K8S_MINOR),".......checking kbs minor type.."
+    //typeOf(K8S_MINOR),".......checking kbs minor type.."
   });
 
 
@@ -111,7 +111,7 @@ const processor = async (job: Job) => {
   return { ok: true, kubeconfigPath: kubePath, controlPlane: cp.ip };
 };
 
-const worker = new Worker("cluster", processor, { connection, concurrency: 1 });
+const worker = new Worker("provision-queue", processor, { connection, concurrency: 1 });
 
 worker.on("active", (job) => console.log(`[worker] active ${job.id}`));
 worker.on("completed", (job, res) => console.log(`[worker] completed ${job.id}`, res));

@@ -12,7 +12,7 @@ const execFileAsync = promisify(execFile);
 const REDIS_URL = process.env.REDIS_URL!;
 const QUEUE_NAME = process.env.QUEUE_NAME || "provision-queue";
 const POD_CIDR_DEFAULT = process.env.POD_CIDR || "10.244.0.0/16";
-const K8S_MINOR_DEFAULT = process.env.K8S_MINOR || 1.31;
+const K8S_MINOR_DEFAULT = process.env.K8S_MINOR || "1.31";
 const KUBECONFIG_DIR = process.env.KUBECONFIG_DIR || "/srv/kubeconfigs";
 const CALICO_URL = process.env.CALICO_URL ||
   "https://raw.githubusercontent.com/projectcalico/calico/v3.28.0/manifests/calico.yaml";

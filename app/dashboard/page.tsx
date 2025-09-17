@@ -66,7 +66,9 @@ export default function NewClusterPage() {
   cluster: { name: data.name, location: data.location, pod_cidr: "10.244.0.0/16", k8s_minor: data.version },
   auth: { method: "password", user: "root", password: "luV5DivOV98g" },
   nodes: {
-    "cp-1": { host: "172.104.206.68", role: "control-plane", hostname: "cp-1", cpu: data.planDetails.cpu, memory_mb: data.planDetails.ram }
+    "cp-1": { host: "172.104.206.68", role: "control-plane", hostname: "cp-1", cpu: data.planDetails.cpu, memory_mb: data.planDetails.ram },
+    "wp-1": { host: "45.79.124.101", role: "worker", hostname: "wp-1", cpu: data.planDetails.cpu, memory_mb: data.planDetails.ram },
+    "wp-2": { host: "172.105.52.85", role: "worker", hostname: "wp-2", cpu: data.planDetails.cpu, memory_mb: data.planDetails.ram }
   }
 }
 

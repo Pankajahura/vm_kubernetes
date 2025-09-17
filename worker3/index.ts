@@ -202,17 +202,21 @@ export DEBIAN_FRONTEND=noninteractive
 
 # 0) Clean any bad Kubernetes repo FIRST
 rm -f /etc/apt/sources.list.d/kubernetes.list /etc/apt/keyrings/kubernetes-apt-keyring.gpg || true
+printf "Clean any bad Kubernetes repo FIRST"
 
 # 1) Base deps
 apt-get update -y
 apt-get install -y ca-certificates curl gnupg lsb-release apt-transport-https
+printf "Base deps installed"
 
 # Ensure keyrings dir exists
 install -m 0755 -d /etc/apt/keyrings
+printf " keyrings dir exists"
 
 # 2) Disable swap (and persist)
 swapoff -a || true
 sed -i.bak '/\\sswap\\s/d' /etc/fstab || true
+printf "Disable swap (and persist)"
 
 # 3) Docker/containerd repo (quote-safe; no $(...) in the string)
 . /etc/os-release
@@ -234,6 +238,8 @@ sed -i 's/^\\s*SystemdCgroup = false/\\tSystemdCgroup = true/' /etc/containerd/c
 sed -i 's|^\\(\\s*sandbox_image = \\).*|\\1"registry.k8s.io/pause:3.10"|' /etc/containerd/config.toml
 systemctl enable --now containerd
 systemctl restart containerd
+
+printf "Docker/containerd repo (quote-safe; no $(...) in the string)"
 
 # 4) Kernel modules + sysctl
 cat >/etc/modules-load.d/k8s.conf <<'EOF'
@@ -303,11 +309,13 @@ async function installCalico(auth: Auth, host: string, calicoUrl: string) {
 
 async function getJoinCommand(auth: Auth, host: string) {
   const cmd = await sshExec(auth, host, sudoWrap(auth, `kubeadm token create --print-join-command`), "join-token");
-  return `sudo ${cmd.trim()}`;
+  return ` ${cmd.trim()}`;
 }
 
 async function joinWorker(auth: Auth, host: string, joinCmd: string) {
-  await sshExec(auth, host, sudoWrap(auth, `set -eux; ${joinCmd}`), `join-${host}`);
+  // await sshExec(auth, host, sudoWrap(auth, `set -eux; ${joinCmd}`), `join-${host}`);
+  await sshExec(auth, host, sudoWrap(auth, `    set -euo pipefail    ${joinCmd}
+ `), `join-${host}`);
 }
 
 async function fetchKubeconfig(auth: Auth, host: string, destPath: string) {
@@ -389,24 +397,45 @@ const processor = async (job: Job) => {
   const workers = nodes.filter((n) => n.role === "worker");
 
   // Optionally set hostnames
+  console.log("hostname set started")
   for (const n of nodes) {
     if (n.hostname) {
-      await sshExec(
-        data.auth,
-        n.host,
-        sudoWrap(data.auth, `hostnamectl set-hostname -- ${JSON.stringify(n.hostname)}`),
-        "set-hostname"
-      );
-      //console.log("hostname is set successful for -",n.hostname);
+      // await sshExec(
+      //   data.auth,
+      //   n.host,
+      //   sudoWrap(data.auth, `hostnamectl set-hostname -- ${JSON.stringify(n.hostname)}`),
+      //   "set-hostname"
+      // );
+
+       const s = `
+     set -e
+     HN=${JSON.stringify(n.hostname)}
+     hostnamectl set-hostname -- "$HN"
+    if grep -qE '^127\\.0\\.1\\.1\\s' /etc/hosts; then
+       sed -i "s/^127\\.0\\.1\\.1.*/127.0.1.1 $HN/" /etc/hosts
+     else
+       echo "127.0.1.1 $HN" >> /etc/hosts
+     fi
+   `;
++   await sshExec(data.auth, n.host, sudoWrap(data.auth, s), "set-hostname");
+
+
+
+
+
+      console.log("hostname is set successful for -",n.hostname);
     }
   }
+  console.log("hostname set ended")
 
   // Warn if sizing below requested
+   console.log("sizing check  started")
   for (const n of nodes) {
     const info = await getHostInfo(data.auth, n.host);
     if (n.cpu && info.cpu < n.cpu) console.warn(`[warn] ${n.host} CPU present=${info.cpu} < target=${n.cpu}`);
     if (n.memory_mb && info.memory_mb < n.memory_mb) console.warn(`[warn] ${n.host} RAM present=${info.memory_mb}MB < target=${n.memory_mb}MB`);
   }
+  console.log("sizing check  ended")
 
   // Bootstrap all nodes
   await Promise.all(nodes.map((n) => bootstrapNode(data.auth, n.host, jobSeries)));

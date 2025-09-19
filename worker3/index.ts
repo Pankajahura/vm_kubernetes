@@ -203,21 +203,18 @@ export DEBIAN_FRONTEND=noninteractive
 
 # 0) Clean any bad Kubernetes repo FIRST
 rm -f /etc/apt/sources.list.d/kubernetes.list /etc/apt/keyrings/kubernetes-apt-keyring.gpg || true
-printf "Clean any bad Kubernetes repo FIRST"
+
 
 # 1) Base deps
 apt-get update -y
 apt-get install -y ca-certificates curl gnupg lsb-release apt-transport-https
-printf "Base deps installed"
 
 # Ensure keyrings dir exists
 install -m 0755 -d /etc/apt/keyrings
-printf " keyrings dir exists"
 
 # 2) Disable swap (and persist)
 swapoff -a || true
 sed -i.bak '/\\sswap\\s/d' /etc/fstab || true
-printf "Disable swap (and persist)"
 
 # 3) Docker/containerd repo (quote-safe; no $(...) in the string)
 . /etc/os-release
@@ -240,7 +237,7 @@ sed -i 's|^\\(\\s*sandbox_image = \\).*|\\1"registry.k8s.io/pause:3.10"|' /etc/c
 systemctl enable --now containerd
 systemctl restart containerd
 
-printf "Docker/containerd repo (quote-safe; no $(...) in the string)"
+
 
 # 4) Kernel modules + sysctl
 cat >/etc/modules-load.d/k8s.conf <<'EOF'

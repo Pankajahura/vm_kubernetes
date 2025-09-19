@@ -5,7 +5,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { updateVmByIps } from "@/lib/supabase/vms";
+import { updateVmByIps } from "../lib/supabase/vms";
 
 const execFileAsync = promisify(execFile);
 
@@ -307,14 +307,45 @@ async function installCalico(auth: Auth, host: string, calicoUrl: string) {
 
 async function getJoinCommand(auth: Auth, host: string) {
   const cmd = await sshExec(auth, host, sudoWrap(auth, `kubeadm token create --print-join-command`), "join-token");
-  return ` ${cmd.trim()}`;
+  return `${cmd.trim()}`;
 }
 
-async function joinWorker(auth: Auth, host: string, joinCmd: string) {
-  // await sshExec(auth, host, sudoWrap(auth, `set -eux; ${joinCmd}`), `join-${host}`);
-  await sshExec(auth, host, sudoWrap(auth, `    set -euo pipefail    ${joinCmd}
- `), `join-${host}`);
+// async function joinWorker(auth: Auth, host: string, joinCmd: string) {
+//   // await sshExec(auth, host, sudoWrap(auth, `set -eux; ${joinCmd}`), `join-${host}`);
+//   await sshExec(auth, host, sudoWrap(auth, `    set -euo pipefail    ${joinCmd}
+//  `), `join-${host}`);
+// }
+
+
+async function joinWorker(auth: Auth, host: string, apiHost: string, joinCmd: string) {
+  const script = `
+set -euo pipefail
+
+echo "== $(hostname) =="
+echo "IP(s): $(hostname -I || true)"
+echo "SSH_CONNECTION: $SSH_CONNECTION"
+
+# Fail fast if API is not reachable from this worker
+if ! (command -v nc >/dev/null 2>&1); then apt-get update -y && apt-get install -y netcat-openbsd >/dev/null 2>&1 || true; fi
+if ! nc -vz ${apiHost} 6443 -w 3 >/dev/null 2>&1; then
+  echo "ERROR: cannot reach ${apiHost}:6443 from $(hostname)"
+  exit 12
+fi
+
+# Optional: wait until healthz returns ok (30*2s = 60s)
+for i in $(seq 1 30); do
+  if command -v curl >/dev/null 2>&1 && curl -sk --max-time 2 https://${apiHost}:6443/healthz | grep -q ok; then
+    break
+  fi
+  sleep 2
+done
+
+echo "Running: ${joinCmd} --v=5"
+${joinCmd} --v=5
+`;
+  await sshExec(auth, host, sudoWrap(auth, script), `join-${host}`);
 }
+
 
 async function fetchKubeconfig(auth: Auth, host: string, destPath: string) {
   await fs.mkdir(path.dirname(destPath), { recursive: true });
@@ -350,7 +381,7 @@ async function labelNode(auth: Auth, apiHost: string, nodeName: string, labels: 
 
 
 
-async function waitForApi(auth: Auth, host: string, timeoutSec = 300) {
+async function waitForApi(auth: Auth, host: string, timeoutSec = 600) {
   const tries = Math.ceil(timeoutSec / 2);
   const script = `
 set -e
@@ -380,13 +411,13 @@ const processor = async (job: Job) => {
   const jobSeries = toSeries(data.cluster.k8s_minor ?? K8S_SERIES);
   const kubeadmVersion = toKubeadmVersion(jobSeries, undefined /* or allow pin via payload */);
 
-  // console.log("[job] starting", {
-  //   id: job.id,
-  //   clusterId,
-  //   nodes: Object.keys(data.nodes).length,
-  //   series: jobSeries,
-  //   kubeadmVersion,
-  // });
+  console.log("[job] starting", {
+    id: job.id,
+    clusterId,
+    nodes: Object.keys(data.nodes).length,
+    series: jobSeries,
+    kubeadmVersion,
+  });
 
   const nodes = Object.values(data.nodes);
   console.log(nodes,".............nodes");
@@ -405,17 +436,17 @@ const processor = async (job: Job) => {
 //       //   "set-hostname"
 //       // );
 
-//        const s = `
-//      set -e
-//      HN=${JSON.stringify(n.hostname)}
-//      hostnamectl set-hostname -- "$HN"
-//     if grep -qE '^127\\.0\\.1\\.1\\s' /etc/hosts; then
-//        sed -i "s/^127\\.0\\.1\\.1.*/127.0.1.1 $HN/" /etc/hosts
-//      else
-//        echo "127.0.1.1 $HN" >> /etc/hosts
-//      fi
-//    `;
-// +   await sshExec(data.auth, n.host, sudoWrap(data.auth, s), "set-hostname");
+//       const s = `
+// set -e
+// HN=${JSON.stringify(n.hostname)}
+// hostnamectl set-hostname -- "$HN"
+// if grep -qE '^127\\.0\\.1\\.1\\s' /etc/hosts; then
+//   sed -i "s/^127\\.0\\.1\\.1.*/127.0.1.1 $HN/" /etc/hosts
+// else
+//   echo "127.0.1.1 $HN" >> /etc/hosts
+// fi
+// `;
+// await sshExec(data.auth, n.host, sudoWrap(data.auth, s), "set-hostname");
 
 
 
@@ -424,49 +455,52 @@ const processor = async (job: Job) => {
 //       console.log("hostname is set successful for -",n.hostname);
 //     }
 //   }
-  console.log("hostname set ended")
+//   console.log("hostname set ended")
 
-  // Warn if sizing below requested
-   console.log("sizing check  started")
-  // for (const n of nodes) {
-  //   const info = await getHostInfo(data.auth, n.host);
-  //   if (n.cpu && info.cpu < n.cpu) console.warn(`[warn] ${n.host} CPU present=${info.cpu} < target=${n.cpu}`);
-  //   if (n.memory_mb && info.memory_mb < n.memory_mb) console.warn(`[warn] ${n.host} RAM present=${info.memory_mb}MB < target=${n.memory_mb}MB`);
-  // }
-  console.log("sizing check  ended")
+//   // Warn if sizing below requested
+//    console.log("sizing check  started")
+//   for (const n of nodes) {
+//     const info = await getHostInfo(data.auth, n.host);
+//     if (n.cpu && info.cpu < n.cpu) console.warn(`[warn] ${n.host} CPU present=${info.cpu} < target=${n.cpu}`);
+//     if (n.memory_mb && info.memory_mb < n.memory_mb) console.warn(`[warn] ${n.host} RAM present=${info.memory_mb}MB < target=${n.memory_mb}MB`);
+//   }
+//   console.log("sizing check  ended")
 
-  // Bootstrap all nodes
-  // await Promise.all(nodes.map((n) => bootstrapNode(data.auth, n.host, jobSeries)));
+//   //Bootstrap all nodes
+//   await Promise.all(nodes.map((n) => bootstrapNode(data.auth, n.host, jobSeries)));
 
-  console.log("installed kubelet , kubecdm , kubeadm");
-
-
-  // Init control-plane
-  // await kubeadmInit(data.auth, cp.host, podCidr, kubeadmVersion);
-  // console.log("initialized kubeadm success");
+//   console.log("installed kubelet , kubecdm , kubeadm");
 
 
-  // await waitForApi(data.auth, cp.host);   
-  // console.log("waiting for api call");
+//   // Init control-plane
+//   await kubeadmInit(data.auth, cp.host, podCidr, kubeadmVersion);
+//   console.log("initialized kubeadm success");
+
+
+  await waitForApi(data.auth, cp.host);   
+  console.log("waiting for api call over");
 
   // CNI
   await installCalico(data.auth, cp.host, CALICO_URL);
   console.log("install_Calico success");
 
   // Join workers or enable master scheduling
-  if (workers.length) {
-    const joinCmd = await getJoinCommand(data.auth, cp.host);
-    for (const w of workers) await joinWorker(data.auth, w.host, joinCmd);
-  } else {
-    // Single-node: allow workloads on control-plane
-   // console.log("allow workloads on control-plane");
-    // await sshExec(
-    //   data.auth,
-    //   cp.host,
-    //   sudoWrap(data.auth, `kubectl --kubeconfig=/etc/kubernetes/admin.conf taint nodes --all node-role.kubernetes.io/control-plane- || true`),
-    //   "cp-sched"
-    // );
-    // after kubeadm init + API ready + (optional) calico:
+ if (workers.length) {
+  const joinCmd = await getJoinCommand(data.auth, cp.host);
+  for (const w of workers) {
+    await joinWorker(data.auth, w.host, cp.host, joinCmd);
+  }
+}
+else {
+    //Single-node: allow workloads on control-plane
+   console.log("allow workloads on control-plane");
+    await sshExec(
+      data.auth,
+      cp.host,
+      sudoWrap(data.auth, `kubectl --kubeconfig=/etc/kubernetes/admin.conf taint nodes --all node-role.kubernetes.io/control-plane- || true`),
+      "cp-sched"
+    );
+    //after kubeadm init + API ready + (optional) calico:
 const untaint = `
 set -euo pipefail
 export KUBECONFIG=/etc/kubernetes/admin.conf
@@ -484,7 +518,7 @@ await sshExec(data.auth, cp.host, sudoWrap(data.auth, untaint), "untaint");
   await fetchKubeconfig(data.auth, cp.host, kubePath);
  // console.log("fetchKubeconfig success");
 
-  await updateVmByIps(job.data.nodes.map((item:any)=> item.host));
+  await updateVmByIps(job.data.ips);
   console.log("updateVmByIps success");
 
   // Optional labels

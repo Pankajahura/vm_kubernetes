@@ -32,7 +32,8 @@ const Payload = z.object({
     k8s_minor: z.string().default("1.31.0")
   }),
   auth: Auth,
-  nodes: z.record(z.string(), NodeSpec)            // {"cp-1":{...}, "w-1":{...}}
+  nodes: z.record(z.string(), NodeSpec) ,
+   ips: z.array(z.string())            // {"cp-1":{...}, "w-1":{...}}
 });
 
 export async function POST(req: Request) {

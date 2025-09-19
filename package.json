@@ -15,7 +15,10 @@
     "worker:start": "node dist/worker/index.js"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.7.0",
+    "@supabase/supabase-js": "^2.57.4",
     "axios": "^1.12.2",
+    "bcryptjs": "^3.0.2",
     "bullmq": "^5.58.5",
     "dotenv": "^17.2.2",
     "execa": "^5.1.1",
@@ -23,7 +26,7 @@
     "next": "15.5.2",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "zod": "^4.1.7"
+    "zod": "^4.1.9"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

@@ -3,6 +3,7 @@
 
 import React, { useMemo, useState } from "react";
 import axios, { AxiosResponse } from 'axios';
+import { buildPayloadWithFreeIps } from "@/lib/supabase/vms";
 
 type Location = "mumbai" | "bangalore" | "noida";
 type Version = "1.31.1";
@@ -58,19 +59,29 @@ export default function NewClusterPage() {
     try {
       // Example: just log & show confirmation (replace with real fetch)
 
-      //need to configure ip and password manually..
-      //get free ip and password from db . 
-      //console.log("[create-cluster] payload:", data);
-     let payload= {
-  provider: "existing",
-  cluster: { name: data.name, location: data.location, pod_cidr: "10.244.0.0/16", k8s_minor: data.version },
-  auth: { method: "password", user: "root", password: "luV5DivOV98g" },
-  nodes: {
-    "cp-1": { host: "172.104.206.68", role: "control-plane", hostname: "cp-1", cpu: data.planDetails.cpu, memory_mb: data.planDetails.ram },
-    "wp-1": { host: "45.79.124.101", role: "worker", hostname: "wp-1", cpu: data.planDetails.cpu, memory_mb: data.planDetails.ram },
-    "wp-2": { host: "172.105.52.85", role: "worker", hostname: "wp-2", cpu: data.planDetails.cpu, memory_mb: data.planDetails.ram }
+      //call get api here to get free ips.
+      //if free ip, then attach it in the payload.
+      //otherwise show error message.
+
+//      let payload= {
+//   provider: "existing",
+//   cluster: { name: data.name, location: data.location, pod_cidr: "10.244.0.0/16", k8s_minor: data.version },
+//   auth: { method: "password", user: "root", password: "luV5DivOV98g" },
+//   nodes: {
+//     "cp-1": { host: "172.104.206.68", role: "control-plane", hostname: "cp-1", cpu: data.planDetails.cpu, memory_mb: data.planDetails.ram },
+//     "wp-1": { host: "45.79.124.101", role: "worker", hostname: "wp-1", cpu: data.planDetails.cpu, memory_mb: data.planDetails.ram },
+//     "wp-2": { host: "172.105.52.85", role: "worker", hostname: "wp-2", cpu: data.planDetails.cpu, memory_mb: data.planDetails.ram }
+//   },
+//   ips:["attach free ips here as well. only ip no password..."]
+// }
+  let payload=await buildPayloadWithFreeIps({name:data.name,location:data.location,version:data.version,planDetails:data.planDetails,nodes:data.nodes});
+  console.log(payload,"...................67");
+
+  if(payload.success===false){
+    setOkMsg(payload.error
+       || "Something went wrong while fetching free IPs.");
+    return;
   }
-}
 
   
    
@@ -79,7 +90,9 @@ export default function NewClusterPage() {
 console.log(payload,"..........................69");
 
 
-let response =await axios.post('/api/clusters',payload);
+let response =await axios.post('/api/clusters',payload.payload);
+
+
 
   if(response.status==200){
     alert('your cluster is being created. please wait for some time.......', );

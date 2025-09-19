@@ -5,6 +5,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { updateVmByIps } from "@/lib/supabase/vms";
 
 const execFileAsync = promisify(execFile);
 
@@ -398,58 +399,58 @@ const processor = async (job: Job) => {
 
   // Optionally set hostnames
   console.log("hostname set started")
-  for (const n of nodes) {
-    if (n.hostname) {
-      // await sshExec(
-      //   data.auth,
-      //   n.host,
-      //   sudoWrap(data.auth, `hostnamectl set-hostname -- ${JSON.stringify(n.hostname)}`),
-      //   "set-hostname"
-      // );
+//   for (const n of nodes) {
+//     if (n.hostname) {
+//       // await sshExec(
+//       //   data.auth,
+//       //   n.host,
+//       //   sudoWrap(data.auth, `hostnamectl set-hostname -- ${JSON.stringify(n.hostname)}`),
+//       //   "set-hostname"
+//       // );
 
-       const s = `
-     set -e
-     HN=${JSON.stringify(n.hostname)}
-     hostnamectl set-hostname -- "$HN"
-    if grep -qE '^127\\.0\\.1\\.1\\s' /etc/hosts; then
-       sed -i "s/^127\\.0\\.1\\.1.*/127.0.1.1 $HN/" /etc/hosts
-     else
-       echo "127.0.1.1 $HN" >> /etc/hosts
-     fi
-   `;
-+   await sshExec(data.auth, n.host, sudoWrap(data.auth, s), "set-hostname");
-
-
+//        const s = `
+//      set -e
+//      HN=${JSON.stringify(n.hostname)}
+//      hostnamectl set-hostname -- "$HN"
+//     if grep -qE '^127\\.0\\.1\\.1\\s' /etc/hosts; then
+//        sed -i "s/^127\\.0\\.1\\.1.*/127.0.1.1 $HN/" /etc/hosts
+//      else
+//        echo "127.0.1.1 $HN" >> /etc/hosts
+//      fi
+//    `;
+// +   await sshExec(data.auth, n.host, sudoWrap(data.auth, s), "set-hostname");
 
 
 
-      console.log("hostname is set successful for -",n.hostname);
-    }
-  }
+
+
+//       console.log("hostname is set successful for -",n.hostname);
+//     }
+//   }
   console.log("hostname set ended")
 
   // Warn if sizing below requested
    console.log("sizing check  started")
-  for (const n of nodes) {
-    const info = await getHostInfo(data.auth, n.host);
-    if (n.cpu && info.cpu < n.cpu) console.warn(`[warn] ${n.host} CPU present=${info.cpu} < target=${n.cpu}`);
-    if (n.memory_mb && info.memory_mb < n.memory_mb) console.warn(`[warn] ${n.host} RAM present=${info.memory_mb}MB < target=${n.memory_mb}MB`);
-  }
+  // for (const n of nodes) {
+  //   const info = await getHostInfo(data.auth, n.host);
+  //   if (n.cpu && info.cpu < n.cpu) console.warn(`[warn] ${n.host} CPU present=${info.cpu} < target=${n.cpu}`);
+  //   if (n.memory_mb && info.memory_mb < n.memory_mb) console.warn(`[warn] ${n.host} RAM present=${info.memory_mb}MB < target=${n.memory_mb}MB`);
+  // }
   console.log("sizing check  ended")
 
   // Bootstrap all nodes
-  await Promise.all(nodes.map((n) => bootstrapNode(data.auth, n.host, jobSeries)));
+  // await Promise.all(nodes.map((n) => bootstrapNode(data.auth, n.host, jobSeries)));
 
   console.log("installed kubelet , kubecdm , kubeadm");
 
 
   // Init control-plane
-  await kubeadmInit(data.auth, cp.host, podCidr, kubeadmVersion);
-  console.log("initialized kubeadm success");
+  // await kubeadmInit(data.auth, cp.host, podCidr, kubeadmVersion);
+  // console.log("initialized kubeadm success");
 
 
-  await waitForApi(data.auth, cp.host);   
-  console.log("waiting for api call");
+  // await waitForApi(data.auth, cp.host);   
+  // console.log("waiting for api call");
 
   // CNI
   await installCalico(data.auth, cp.host, CALICO_URL);
@@ -484,7 +485,10 @@ await sshExec(data.auth, cp.host, sudoWrap(data.auth, untaint), "untaint");
   // Fetch kubeconfig
   const kubePath = path.join(KUBECONFIG_DIR, `${clusterId}.yaml`);
   await fetchKubeconfig(data.auth, cp.host, kubePath);
-  console.log("fetchKubeconfig success");
+ // console.log("fetchKubeconfig success");
+
+  await updateVmByIps(job.data.nodes.map((item:any)=> item.host));
+  console.log("updateVmByIps success");
 
   // Optional labels
   // const cpInfo = await getHostInfo(data.auth, cp.host);
@@ -498,13 +502,13 @@ await sshExec(data.auth, cp.host, sudoWrap(data.auth, untaint), "untaint");
 //   "topology.kubernetes.io/region": data.cluster.location,
 // });
 
-  for (const w of workers) {
-    const wInfo = await getHostInfo(data.auth, w.host);
-    await labelNode(data.auth, cp.host, wInfo.hostname, {
-      "ahura.cloud/cluster": data.cluster.name,
-      "topology.kubernetes.io/region": data.cluster.location,
-    });
-  }
+  // for (const w of workers) {
+  //   const wInfo = await getHostInfo(data.auth, w.host);
+  //   await labelNode(data.auth, cp.host, wInfo.hostname, {
+  //     "ahura.cloud/cluster": data.cluster.name,
+  //     "topology.kubernetes.io/region": data.cluster.location,
+  //   });
+  // }
 
   return { ok: true, kubeconfigPath: kubePath, controlPlane: cp.host, nodes: data.nodes };
 };

@@ -1,0 +1,58 @@
+import { vmFetchSchema } from "@/lib/schema/vmSchema";
+import { createClient } from "@/lib/supabase/server";
+import { NextRequest, NextResponse } from "next/server";
+
+
+async function getUserIdOr401() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { userId: null as string | null, response: NextResponse.json({ error: 'Not authenticated' }, { status: 401 }) };
+  }
+  return { userId: user.id, response: null as any };
+}
+
+export async function GET(req: NextRequest) {
+  const auth = await getUserIdOr401();
+ // if (auth.response) return auth.response;
+
+  try {
+    const { searchParams } = new URL(req.url);
+    const location = searchParams.get('location') ?? '';
+    const number = searchParams.get('number') ?? undefined;
+
+    const parsed = vmFetchSchema.parse({ location, number });
+
+    const supabase = await createClient();
+
+    
+    const { data, error } = await supabase
+      .from('vms')
+      .select('id, ip_address, username, location, status, created_at')
+      .eq('location', parsed.location)
+      .eq('status', 'free')
+      .order('created_at', { ascending: true })
+      .limit(parsed.number);
+
+
+      if(data&& data.length<parsed.number){
+        
+        return NextResponse.json({ error: "currently , we are out of service. Insufficient vm in db" }, { status: 400 });
+      }
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+
+    return NextResponse.json(
+      (data ?? []).map(r => ({
+        id: r.id,
+        ipAddress: r.ip_address,
+        username: r.username,
+        location: r.location,
+        status: r.status,
+        createdAt: r.created_at,
+      }))
+    );
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message ?? 'Invalid request' }, { status: 400 });
+  }
+}

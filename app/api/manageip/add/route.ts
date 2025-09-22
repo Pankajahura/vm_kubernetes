@@ -32,8 +32,11 @@ export async function POST(req: NextRequest) {
         password_hash,
         location: parsed.location,
         status: parsed.status ?? 'free',
+        ram: parsed.ram,
+        cpu: parsed.cpu,
+        storage: parsed.storage,
       })
-      .select('id, ip_address, username, location, status, created_at')
+      .select('id, ip_address, username, location, status,ram,cpu,storage, created_at')
       .single();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
@@ -44,6 +47,9 @@ export async function POST(req: NextRequest) {
       username: data.username,
       location: data.location,
       status: data.status,
+      ram: data.ram,
+        cpu: data.cpu,
+        storage: data.storage,
       createdAt: data.created_at,
     }, { status: 201 });
   } catch (err: any) {

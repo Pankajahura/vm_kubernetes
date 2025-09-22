@@ -20,7 +20,7 @@ const NodeSpec = z.object({
   role: z.enum(["control-plane", "worker"]),
   hostname: z.string().optional(),
   cpu: z.number().int().min(1).optional(),        // validated only
-  memory_mb: z.number().int().min(512).optional() // validated only
+  memory_mb: z.number().int().min(1).optional() // validated only
 });
 
 const Payload = z.object({

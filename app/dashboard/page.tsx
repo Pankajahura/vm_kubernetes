@@ -4,6 +4,7 @@
 import React, { useMemo, useState } from "react";
 import axios, { AxiosResponse } from 'axios';
 import { buildPayloadWithFreeIps } from "@/lib/supabase/vms";
+import api from "@/lib/axios/axios";
 
 type Location = "mumbai" | "bangalore" | "noida";
 type Version = "1.31.1";
@@ -11,11 +12,11 @@ type PlanId = "nano" | "micro" | "small";
 
 const NODE_PLANS: Record<
   PlanId,
-  { label: string; ram: number; cpu: number; storage: string }
+  { label: string; ram: number; cpu: number; storage: number}
 > = {
-  nano: { label: "Nano • 512MB RAM • 1 vCPU • 2GB SSD", ram: 512, cpu: 1, storage: "2GB" },
-  micro: { label: "Micro • 1GB RAM • 1 vCPU • 10GB SSD", ram: 1024, cpu: 1, storage: "10GB" },
-  small: { label: "Small • 2GB RAM • 1 vCPU • 25GB SSD", ram: 2048, cpu: 1, storage: "25GB" },
+  nano: { label: "Nano • 1GB RAM • 1 vCPU • 27GB SSD", ram: 1, cpu: 1, storage: 27 },
+  micro: { label: "Micro • 1GB RAM • 1 vCPU • 27GB SSD", ram: 1, cpu: 1, storage: 27 },
+  small: { label: "Small • 1GB RAM • 1 vCPU • 27GB SSD", ram: 1, cpu: 1, storage: 27 },
 };
 
 export default function NewClusterPage() {
@@ -90,7 +91,7 @@ export default function NewClusterPage() {
 console.log(payload,"..........................69");
 
 
-let response =await axios.post('/api/clusters',payload.payload);
+let response =await api.post('/clusters',payload.payload);
 
 
 
@@ -269,3 +270,30 @@ let response =await axios.post('/api/clusters',payload.payload);
     </div>
   );
 }
+
+// app/dashboard/page.tsx
+
+
+
+
+// import NewClusterForm from "@/components/dashboard/page";
+// import { createClusterAction } from "@/lib/actions/dashboard";
+
+// export default function Page() {
+//   return <NewClusterForm action={createClusterAction} />;
+// }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

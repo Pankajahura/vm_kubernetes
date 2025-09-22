@@ -5,7 +5,7 @@ import { success } from "zod";
 import { createClient } from "./server";
 import { headers, cookies } from "next/headers";
 
-type Plan = { cpu: number; ram: number };
+type Plan = { cpu: number; ram: number;storage: number };
 
 export async function updateVmByIps(ips: string[]) {
   const supabase = await createClient();
@@ -54,9 +54,12 @@ export async function buildPayloadWithFreeIps(payloads: {
 
   const { data, error } = await supabase
       .from('vms')
-      .select('id, ip_address, username, location, status, created_at')
+      .select('id, ip_address, username, location,ram,cpu,storage, status, created_at')
       .eq('location', payloads.location)
       .eq('status', 'free')
+      .eq('ram', payloads.planDetails.ram)
+      .eq('cpu', payloads.planDetails.cpu)
+      .eq('storage', payloads.planDetails.storage)
       .order('created_at', { ascending: true })
       .limit(payloads.nodes+1);
 

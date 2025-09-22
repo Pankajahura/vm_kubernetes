@@ -20,23 +20,30 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const location = searchParams.get('location') ?? '';
     const number = searchParams.get('number') ?? undefined;
+    const ram = searchParams.get('ram') ?? undefined;
+    const cpu = searchParams.get('cpu') ?? undefined;
+    const storage = searchParams.get('storage') ?? undefined;
 
-    const parsed = vmFetchSchema.parse({ location, number });
+    console.log(typeof(number),ram,storage,"......cpu,ram,storage...........")
+
+    const parsed = vmFetchSchema.parse({ location, number,ram,cpu,storage});
 
     const supabase = await createClient();
 
     
     const { data, error } = await supabase
       .from('vms')
-      .select('id, ip_address, username, location, status, created_at')
+      .select('id, ip_address, username, location,ram,cpu,storage, status, created_at')
       .eq('location', parsed.location)
       .eq('status', 'free')
+      .eq('ram', parsed.ram)
+      .eq('cpu', parsed.cpu)
+      .eq('storage', parsed.storage)
       .order('created_at', { ascending: true })
       .limit(parsed.number);
 
 
-      if(data&& data.length<parsed.number){
-        
+      if(data&& data.length<parsed.number){   
         return NextResponse.json({ error: "currently , we are out of service. Insufficient vm in db" }, { status: 400 });
       }
 

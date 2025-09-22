@@ -427,54 +427,54 @@ const processor = async (job: Job) => {
 
   // Optionally set hostnames
   console.log("hostname set started")
-//   for (const n of nodes) {
-//     if (n.hostname) {
-//       // await sshExec(
-//       //   data.auth,
-//       //   n.host,
-//       //   sudoWrap(data.auth, `hostnamectl set-hostname -- ${JSON.stringify(n.hostname)}`),
-//       //   "set-hostname"
-//       // );
+  for (const n of nodes) {
+    if (n.hostname) {
+      // await sshExec(
+      //   data.auth,
+      //   n.host,
+      //   sudoWrap(data.auth, `hostnamectl set-hostname -- ${JSON.stringify(n.hostname)}`),
+      //   "set-hostname"
+      // );
 
-//       const s = `
-// set -e
-// HN=${JSON.stringify(n.hostname)}
-// hostnamectl set-hostname -- "$HN"
-// if grep -qE '^127\\.0\\.1\\.1\\s' /etc/hosts; then
-//   sed -i "s/^127\\.0\\.1\\.1.*/127.0.1.1 $HN/" /etc/hosts
-// else
-//   echo "127.0.1.1 $HN" >> /etc/hosts
-// fi
-// `;
-// await sshExec(data.auth, n.host, sudoWrap(data.auth, s), "set-hostname");
-
-
+      const s = `
+set -e
+HN=${JSON.stringify(n.hostname)}
+hostnamectl set-hostname -- "$HN"
+if grep -qE '^127\\.0\\.1\\.1\\s' /etc/hosts; then
+  sed -i "s/^127\\.0\\.1\\.1.*/127.0.1.1 $HN/" /etc/hosts
+else
+  echo "127.0.1.1 $HN" >> /etc/hosts
+fi
+`;
+await sshExec(data.auth, n.host, sudoWrap(data.auth, s), "set-hostname");
 
 
 
-//       console.log("hostname is set successful for -",n.hostname);
-//     }
-//   }
-//   console.log("hostname set ended")
 
-//   // Warn if sizing below requested
-//    console.log("sizing check  started")
-//   for (const n of nodes) {
-//     const info = await getHostInfo(data.auth, n.host);
-//     if (n.cpu && info.cpu < n.cpu) console.warn(`[warn] ${n.host} CPU present=${info.cpu} < target=${n.cpu}`);
-//     if (n.memory_mb && info.memory_mb < n.memory_mb) console.warn(`[warn] ${n.host} RAM present=${info.memory_mb}MB < target=${n.memory_mb}MB`);
-//   }
-//   console.log("sizing check  ended")
 
-//   //Bootstrap all nodes
-//   await Promise.all(nodes.map((n) => bootstrapNode(data.auth, n.host, jobSeries)));
+      console.log("hostname is set successful for -",n.hostname);
+    }
+  }
+  console.log("hostname set ended")
+
+  // Warn if sizing below requested
+   console.log("sizing check  started")
+  for (const n of nodes) {
+    const info = await getHostInfo(data.auth, n.host);
+    if (n.cpu && info.cpu < n.cpu) console.warn(`[warn] ${n.host} CPU present=${info.cpu} < target=${n.cpu}`);
+    if (n.memory_mb && info.memory_mb < n.memory_mb) console.warn(`[warn] ${n.host} RAM present=${info.memory_mb}MB < target=${n.memory_mb}MB`);
+  }
+  console.log("sizing check  ended")
+
+  //Bootstrap all nodes
+  await Promise.all(nodes.map((n) => bootstrapNode(data.auth, n.host, jobSeries)));
 
 //   console.log("installed kubelet , kubecdm , kubeadm");
 
 
 //   // Init control-plane
-//   await kubeadmInit(data.auth, cp.host, podCidr, kubeadmVersion);
-//   console.log("initialized kubeadm success");
+  await kubeadmInit(data.auth, cp.host, podCidr, kubeadmVersion);
+  console.log("initialized kubeadm success");
 
 
   await waitForApi(data.auth, cp.host);   

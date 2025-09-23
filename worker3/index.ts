@@ -5,7 +5,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { updateVmByIps } from "../lib/supabase/vms";
+import { updateVmByIps } from "../lib/supabase/updatevms";
 
 const execFileAsync = promisify(execFile);
 
@@ -296,9 +296,49 @@ if [ -n "${'${SUDO_USER:-}'}" ]; then
 fi
 `;
 
+  await sshExec(auth, host, sudoWrap(auth, script), "repair-api-server");
+}
+
+
+
+async function RepairApiServer(auth: Auth, host: string) {
+ 
+  const script = String.raw`
+ set -euxo pipefail
+ # Align containerd with kubeadm expectations (idempotent)
+sed -i 's|^\(\s*sandbox_image = \).*|\1"registry.k8s.io/pause:3.10"|' /etc/containerd/config.toml || true
+sed -i 's/^\s*SystemdCgroup = false/\tSystemdCgroup = true/' /etc/containerd/config.toml || true
+systemctl restart containerd
+# Make sure net sysctls are set
+cat >/etc/sysctl.d/99-kubernetes-cri.conf <<'EOF'
+net.bridge.bridge-nf-call-iptables  = 1
+net.ipv4.ip_forward                 = 1
+net.bridge.bridge-nf-call-ip6tables = 1
+EOF
+sysctl --system >/dev/null
+# Pre-pull control plane images (avoids pull delays)
+kubeadm config images pull --kubernetes-version=stable-1.31 || true
+# Restart kubelet to (re)create static pods
+systemctl restart kubelet
+
+# Wait for API to come up (<= ~5 min)
+export KUBECONFIG=/etc/kubernetes/admin.conf
+for i in {1..150}; do
+  kubectl get --raw='/readyz?verbose' >/dev/null 2>&1 && echo "API READY" && break
+  sleep 2
+done
+
+# Show status
+kubectl get nodes -o wide || true
+`;
+
   await sshExec(auth, host, sudoWrap(auth, script), "kubeadm-init");
 }
 
+
+// async function copyKubconfigToWorkers(apiHost: string, workers: NodeSpec[]) {
+//   // Copy kubeconfig to each worker node
+// }
 
 
 async function installCalico(auth: Auth, host: string, calicoUrl: string) {
@@ -398,6 +438,56 @@ echo "apiserver not ready after ${timeoutSec}s" >&2; exit 1
 
 
 
+
+
+// copies /etc/kubernetes/admin.conf from cpHost to ~/.kube/config on each worker
+ async function pushKubeconfigToWorkers(
+  auth: Auth,
+  cpHost: string,
+  workerHosts: string[],
+) {
+  const pwFlag = auth.method === "password"
+    ? `sshpass -p '${auth.password.replace(/'/g, `'\\''`)}' `
+    : "";
+  const keyFlag = auth.method === "key"
+    ? `-i ${auth.private_key_path}`
+    : "";
+
+  for (const w  of workerHosts) {
+    const script = `
+set -euo pipefail
+export DEBIAN_FRONTEND=noninteractive
+
+# tools we need
+if ! command -v scp >/dev/null 2>&1; then apt-get update -y && apt-get install -y openssh-client; fi
+${auth.method === "password" ? `if ! command -v sshpass >/dev/null 2>&1; then apt-get update -y && apt-get install -y sshpass; fi` : ``}
+
+# ensure target dir
+mkdir -p "\${HOME}/.kube"
+chmod 700 "\${HOME}/.kube"
+
+# try SCP; if it fails (permissions), fall back to ssh+sudo cat
+if ${pwFlag}scp ${keyFlag} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+  ${auth.user}@${cpHost}:/etc/kubernetes/admin.conf "\${HOME}/.kube/config"; then
+  :
+else
+  echo "SCP failed, falling back to ssh+sudo cat..." >&2
+  ${pwFlag}ssh ${keyFlag} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+    ${auth.user}@${cpHost} "sudo cat /etc/kubernetes/admin.conf" > "\${HOME}/.kube/config"
+fi
+
+chmod 600 "\${HOME}/.kube/config"
+chown \$(id -u):\$(id -g) "\${HOME}/.kube/config"
+echo "Installed kubeconfig at \${HOME}/.kube/config"
+`;
+    await sshExec(auth, w, sudoWrap(auth, script), "kubefiles");
+  }
+}
+
+
+
+
+
 // ---------- Processor ----------
 
 
@@ -407,7 +497,7 @@ const processor = async (job: Job) => {
   const clusterId = data.clusterId;
   const podCidr = data.cluster.pod_cidr || POD_CIDR_DEFAULT;
 
-  // Allow job to override the series if it provides k8s_minor
+//   // Allow job to override the series if it provides k8s_minor
   const jobSeries = toSeries(data.cluster.k8s_minor ?? K8S_SERIES);
   const kubeadmVersion = toKubeadmVersion(jobSeries, undefined /* or allow pin via payload */);
 
@@ -420,61 +510,61 @@ const processor = async (job: Job) => {
   });
 
   const nodes = Object.values(data.nodes);
-  console.log(nodes,".............nodes");
+  console.log(nodes,"...................nodes");
   const cp = nodes.find((n) => n.role === "control-plane");
   if (!cp) throw new Error("No control-plane node provided.");
   const workers = nodes.filter((n) => n.role === "worker");
 
   // Optionally set hostnames
   console.log("hostname set started")
-//   for (const n of nodes) {
-//     if (n.hostname) {
-//       // await sshExec(
-//       //   data.auth,
-//       //   n.host,
-//       //   sudoWrap(data.auth, `hostnamectl set-hostname -- ${JSON.stringify(n.hostname)}`),
-//       //   "set-hostname"
-//       // );
+  for (const n of nodes) {
+    if (n.hostname) {
+      // await sshExec(
+      //   data.auth,
+      //   n.host,
+      //   sudoWrap(data.auth, `hostnamectl set-hostname -- ${JSON.stringify(n.hostname)}`),
+      //   "set-hostname"
+      // );
 
-//       const s = `
-// set -e
-// HN=${JSON.stringify(n.hostname)}
-// hostnamectl set-hostname -- "$HN"
-// if grep -qE '^127\\.0\\.1\\.1\\s' /etc/hosts; then
-//   sed -i "s/^127\\.0\\.1\\.1.*/127.0.1.1 $HN/" /etc/hosts
-// else
-//   echo "127.0.1.1 $HN" >> /etc/hosts
-// fi
-// `;
-// await sshExec(data.auth, n.host, sudoWrap(data.auth, s), "set-hostname");
-
-
+      const s = `
+set -e
+HN=${JSON.stringify(n.hostname)}
+hostnamectl set-hostname -- "$HN"
+if grep -qE '^127\\.0\\.1\\.1\\s' /etc/hosts; then
+  sed -i "s/^127\\.0\\.1\\.1.*/127.0.1.1 $HN/" /etc/hosts
+else
+  echo "127.0.1.1 $HN" >> /etc/hosts
+fi
+`;
+await sshExec(data.auth, n.host, sudoWrap(data.auth, s), "set-hostname");
 
 
 
-//       console.log("hostname is set successful for -",n.hostname);
-//     }
-//   }
-//   console.log("hostname set ended")
+
+
+      console.log("hostname is set successful for -",n.hostname);
+    }
+  }
+  console.log("hostname set ended")
 
 //   // Warn if sizing below requested
-//    console.log("sizing check  started")
-//   for (const n of nodes) {
-//     const info = await getHostInfo(data.auth, n.host);
-//     if (n.cpu && info.cpu < n.cpu) console.warn(`[warn] ${n.host} CPU present=${info.cpu} < target=${n.cpu}`);
-//     if (n.memory_mb && info.memory_mb < n.memory_mb) console.warn(`[warn] ${n.host} RAM present=${info.memory_mb}MB < target=${n.memory_mb}MB`);
-//   }
-//   console.log("sizing check  ended")
+   console.log("sizing check  started")
+  for (const n of nodes) {
+    const info = await getHostInfo(data.auth, n.host);
+    if (n.cpu && info.cpu < n.cpu) console.warn(`[warn] ${n.host} CPU present=${info.cpu} < target=${n.cpu}`);
+    if (n.memory_mb && info.memory_mb < n.memory_mb) console.warn(`[warn] ${n.host} RAM present=${info.memory_mb}MB < target=${n.memory_mb}MB`);
+  }
+  console.log("sizing check  ended")
 
 //   //Bootstrap all nodes
-//   await Promise.all(nodes.map((n) => bootstrapNode(data.auth, n.host, jobSeries)));
+  await Promise.all(nodes.map((n) => bootstrapNode(data.auth, n.host, jobSeries)));
 
-//   console.log("installed kubelet , kubecdm , kubeadm");
+  console.log("installed kubelet , kubecdm , kubeadm");
 
 
 //   // Init control-plane
-//   await kubeadmInit(data.auth, cp.host, podCidr, kubeadmVersion);
-//   console.log("initialized kubeadm success");
+  await kubeadmInit(data.auth, cp.host, podCidr, kubeadmVersion);
+  console.log("initialized kubeadm success");
 
 
   await waitForApi(data.auth, cp.host);   
@@ -516,10 +606,22 @@ await sshExec(data.auth, cp.host, sudoWrap(data.auth, untaint), "untaint");
   // Fetch kubeconfig
   const kubePath = path.join(KUBECONFIG_DIR, `${clusterId}.yaml`);
   await fetchKubeconfig(data.auth, cp.host, kubePath);
- // console.log("fetchKubeconfig success");
 
-  await updateVmByIps(job.data.ips);
-  console.log("updateVmByIps success");
+  //If API server are exited or missing  apply these  safe repairs
+  await RepairApiServer(data.auth, cp.host);
+  console.log("RepairApiServer success");
+
+
+  // await pushKubeconfigToWorkers(data.auth,cp.host,job.data.ips.slice(1));
+  console.log("copyKubconfigToWorkers success");
+  
+
+
+ //console.log("fetchKubeconfig success");
+
+ console.log("reached here")
+ const check= await updateVmByIps(job.data.ips);
+  console.log(check,"updateVmByIps success");
 
   // Optional labels
   // const cpInfo = await getHostInfo(data.auth, cp.host);
@@ -541,7 +643,7 @@ await sshExec(data.auth, cp.host, sudoWrap(data.auth, untaint), "untaint");
   //   });
   // }
 
-  return { ok: true, kubeconfigPath: kubePath, controlPlane: cp.host, nodes: data.nodes };
+ // return { ok: true, kubeconfigPath: kubePath, controlPlane: cp.host, nodes: data.nodes };
 };
 
 // ---------- Start worker ----------

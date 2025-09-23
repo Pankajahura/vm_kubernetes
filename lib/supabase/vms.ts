@@ -8,6 +8,7 @@ import { headers, cookies } from "next/headers";
 type Plan = { cpu: number; ram: number;storage: number };
 
 export async function updateVmByIps(ips: string[]) {
+  console.log(ips, "...........in updateVmByIps........");
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("vms")
@@ -16,7 +17,8 @@ export async function updateVmByIps(ips: string[]) {
     .eq("status", "free") // optional guard: only free -> used
     .select("id, ip_address, username, location, status, created_at");
 
-  if (error) throw new Error(error.message);
+  if (error?.message) throw new Error(error.message);
+  console.log(error?.message, "...........error...........");
 
   // if you used `next: { tags: ['vms'] }` on fetch, you can revalidate here:
   // revalidateTag('vms');
@@ -67,8 +69,10 @@ export async function buildPayloadWithFreeIps(payloads: {
 
   if (error) {
     // const msg = await res.text().catch(() => "Failed to fetch free IPs");
+    console.log(error.message,"...............error.message");
     return { success: false, error: error.message };
   }
+  console.log(data,"...............data");
 
   // // const free = (await res.json()) as Array<{
   // //   id: string;

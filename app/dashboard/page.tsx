@@ -5,6 +5,7 @@ import React, { useMemo, useState } from "react";
 import axios, { AxiosResponse } from 'axios';
 import { buildPayloadWithFreeIps } from "@/lib/supabase/vms";
 import api from "@/lib/axios/axios";
+import { places } from "@/utils";
 
 type Location = "mumbai" | "bangalore" | "noida";
 type Version = "1.31.1";
@@ -16,7 +17,8 @@ const NODE_PLANS: Record<
 > = {
   nano: { label: "Nano • 1GB RAM • 1 vCPU • 27GB SSD", ram: 1, cpu: 1, storage: 27 },
   micro: { label: "Micro • 1GB RAM • 1 vCPU • 27GB SSD", ram: 1, cpu: 1, storage: 27 },
-  small: { label: "Small • 1GB RAM • 1 vCPU • 27GB SSD", ram: 1, cpu: 1, storage: 27 },
+  small: { label: "Small • 4GB RAM • 2 vCPU • 27GB SSD", ram: 4, cpu: 2, storage: 27 },
+  
 };
 
 export default function NewClusterPage() {
@@ -163,9 +165,11 @@ let response =await api.post('/clusters',payload.payload);
                   onChange={(e) => setLocation(e.target.value as Location)}
                   className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
-                  <option value="mumbai">Mumbai</option>
+                  {/* <option value="mumbai">Mumbai</option>
                   <option value="bangalore">Bangalore</option>
-                  <option value="noida">Noida</option>
+                  <option value="germany">Germany</option>
+                  <option value="toronto">Toronto</option> */}
+                  {places.map((place)=><option value={place} key={place}>{place.charAt(0).toUpperCase()+place.slice(1)}</option>)}
                 </select>
               </div>
 

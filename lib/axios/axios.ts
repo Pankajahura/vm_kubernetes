@@ -20,6 +20,7 @@ api.interceptors.response.use(
       ?.message;
 
     if (status === 400) {
+      console.log(serverMessage,"..............serverMessage");
       toast.error(serverMessage || "Bad request - invalid input.");
     } else if (status === 401) {
       toast.error(serverMessage || "Unauthorized - please login.");

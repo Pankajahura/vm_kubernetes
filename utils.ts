@@ -1,0 +1,1 @@
+export const places=["mumbai","bangalore","germany","toronto"];

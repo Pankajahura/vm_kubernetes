@@ -3,11 +3,15 @@
 
 import { success } from "zod";
 import { createClient } from "./server";
+
 import { headers, cookies } from "next/headers";
 
 type Plan = { cpu: number; ram: number;storage: number };
 
 export async function updateVmByIps(ips: string[]) {
+
+  console.log(ips,"...............ips");
+  
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("vms")
@@ -15,7 +19,7 @@ export async function updateVmByIps(ips: string[]) {
     .in("ip_address", ips) // <- match multiple rows by IP
     .eq("status", "free") // optional guard: only free -> used
     .select("id, ip_address, username, location, status, created_at");
-
+    console.log(error.message,"...............error.message");
   if (error) throw new Error(error.message);
 
   // if you used `next: { tags: ['vms'] }` on fetch, you can revalidate here:

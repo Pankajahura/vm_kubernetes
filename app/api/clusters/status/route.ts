@@ -10,16 +10,18 @@ type Row = {
   status: "pending" | "creating" | "ready" | "failed" | "deleted" | null;
 };
 
-export async function GET(
-  _req: Request,
-  { params }: { params: { clusterId: string } }
+export async function POST(
+  req: Request
 ) {
   const supabase = await createSSRClient();
 
+  //console.log(,"...............params")
+  const body = await req.json().catch(() => null);
+  console.log(body,"...............params 22222")
   const { data, error } = await supabase
     .from("clusters")
     .select("create_status, connect_status, verify_status, status")
-    .eq("cluster_id", params.clusterId)
+    .eq("cluster_id", body.clusterId)
     .single<Row>();
 
   if (error) {
@@ -38,7 +40,7 @@ export async function GET(
 
   return NextResponse.json({
     success: true,
-    clusterId: params.clusterId,
+    clusterId: body.clusterId,
     createStatus: data.create_status ?? false,
     connectStatus: data.connect_status ?? false,
     verifyStatus: data.verify_status ?? false,

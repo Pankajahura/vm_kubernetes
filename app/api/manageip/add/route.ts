@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { vmCreateSchema } from '@/lib/schema/vmSchema';
 import bcrypt from 'bcryptjs';
-import { createClient } from '@/lib/supabase/server';
+import { createSSRClient } from '@/lib/supabase/server';
 
 async function getUserIdOr401() {
-  const supabase = await createClient();
+  const supabase = await createSSRClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return { userId: null as string | null, response: NextResponse.json({ error: 'Not authenticated' }, { status: 401 }) };
@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     const json = await req.json();
     const parsed = vmCreateSchema.parse(json);
 
-    const supabase =await createClient();
+    const supabase =await createSSRClient();
     const password_hash = await bcrypt.hash(parsed.password, 10);
 
     const { data, error } = await supabase

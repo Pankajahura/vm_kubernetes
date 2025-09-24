@@ -2,32 +2,37 @@
 "use server";
 
 import { success } from "zod";
-import { createClient } from "./server";
+import { createSSRClient } from "./server";
+import { createClient } from "@supabase/supabase-js";
 
 import { headers, cookies } from "next/headers";
 
 type Plan = { cpu: number; ram: number;storage: number };
 
-export async function updateVmByIps(ips: string[]) {
-  console.log(ips, "...........in updateVmByIps........");
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("vms")
-    .update({ status: "used" })
-    .in("ip_address", ips) // <- match multiple rows by IP
-    .eq("status", "free") // optional guard: only free -> used
-    .select("id, ip_address, username, location, status, created_at");
+// export async function updateVmByIps(ips: string[]) {
+//   console.log(ips, "...........in updateVmByIps........");
+//   const supabase = await createSSRClient();
+//   const { data, error } = await supabase
+//     .from("vms")
+//     .update({ status: "used" })
+//     .in("ip_address", ips) // <- match multiple rows by IP
+//     .eq("status", "free") // optional guard: only free -> used
+//     .select("id, ip_address, username, location, status, created_at");
 
-  if (error?.message) throw new Error(error.message);
-  console.log(error?.message, "...........error...........");
+//   if (error?.message) throw new Error(error.message);
+//   console.log(error?.message, "...........error...........");
 
-  // if you used `next: { tags: ['vms'] }` on fetch, you can revalidate here:
-  // revalidateTag('vms');
+//   // if you used `next: { tags: ['vms'] }` on fetch, you can revalidate here:
+//   // revalidateTag('vms');
 
-  return { success: true, message: "IP status updated successfully" };
-}
+//   return { success: true, message: "IP status updated successfully" };
+// }
 
 // Call  GET /api/vms and PUT /api/vms/use with the user's session cookies.
+
+
+
+
 export async function buildPayloadWithFreeIps(payloads: {
   name: string;
   location: string;
@@ -53,7 +58,7 @@ export async function buildPayloadWithFreeIps(payloads: {
   //   { headers: { cookie: cookieHeader }, cache: "no-store" }
   // );
 
-  const supabase = await createClient();
+  const supabase = await createSSRClient();
 
   const { data, error } = await supabase
       .from('vms')
@@ -130,6 +135,36 @@ export async function buildPayloadWithFreeIps(payloads: {
   };
 
   return { success: true, payload };
+}
+
+
+
+
+export async function updateVmByIps(ips: string[]) {
+
+  console.log(ips,"...............ips");
+  
+  const supabase = await createClient( process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!,
+  { auth: { persistSession: false, autoRefreshToken: false } });
+  const { data, error } = await supabase
+    .from("vms")
+    .update({ status: "used" })
+    .in("ip_address", ips) // <- match multiple rows by IP
+    .eq("status", "free") // optional guard: only free -> used
+    .select("id, ip_address, username, location, status, created_at");
+    //console.log(error.message,"...............error.message");
+  if (error?.message) 
+  {
+    console.log(error?.message,"...............error.message");
+    throw new Error(error.message);
+    
+  }
+
+  // if you used `next: { tags: ['vms'] }` on fetch, you can revalidate here:
+  // revalidateTag('vms');
+
+  return { success: true, message: "IP status updated successfully",data:data };
 }
 
 

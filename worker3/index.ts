@@ -12,7 +12,6 @@ import {
 } from "@/lib/supabase/cluster";
 
 const execFileAsync = promisify(execFile);
-
 // ---------- ENV ----------
 const REDIS_URL = process.env.REDIS_URL!;
 const QUEUE_NAME = process.env.QUEUE_NAME || "provision-queue";
@@ -574,13 +573,6 @@ const processor = async (job: Job) => {
     undefined /* or allow pin via payload */
   );
 
-  console.log("[job] starting", {
-    id: job.id,
-    clusterId,
-    nodes: Object.keys(data.nodes).length,
-    series: jobSeries,
-    kubeadmVersion,
-  });
 
   const nodes = Object.values(data.nodes);
   //console.log(nodes,"...................nodes");
@@ -604,13 +596,6 @@ const processor = async (job: Job) => {
   console.log("hostname set started");
   for (const n of nodes) {
     if (n.hostname) {
-      // await sshExec(
-      //   data.auth,
-      //   n.host,
-      //   sudoWrap(data.auth, `hostnamectl set-hostname -- ${JSON.stringify(n.hostname)}`),
-      //   "set-hostname"
-      // );
-
       const s = `
 set -e
 HN=${JSON.stringify(n.hostname)}
@@ -710,6 +695,8 @@ kubectl taint nodes -l "kubernetes.io/hostname=${"${HN}"}" node-role.kubernetes.
   });
 
   //If API server are exited or missing  apply these  safe repairs
+  console.log("RepairApiServer started");
+
   await RepairApiServer(data.auth, cp.host);
   await updateClusterPhaseWorker({
     clusterId: clusterId as string,

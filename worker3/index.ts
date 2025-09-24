@@ -9,7 +9,7 @@ import { updateVmByIps } from "../lib/supabase/vms";
 import {
   createClusterWorker,
   updateClusterPhaseWorker,
-} from "@/lib/supabase/cluster";
+} from "../lib/supabase/cluster";
 
 const execFileAsync = promisify(execFile);
 
@@ -590,14 +590,14 @@ const processor = async (job: Job) => {
 
   await createClusterWorker({
     clusterId: clusterId,
-    clusterName: job.data?.name ?? `cluster-${job.id}`,
+    clusterName: job.data?.cluster?.name ?? `cluster-${job.id}`,
     controlPlane: job.data?.ips[0] ?? null,
     workers: job.data?.ips.slice(1) ?? [],
     nodeConfig: job.data?.nodeSpec ?? null,
     cniPlugin: job.data?.cni ?? "calico",
     k8sVersion: job.data?.k8sVersion ?? "1.31.1",
     status: "pending",
-    ownerId: job.data?.ownerId ?? null,
+    //ownerId: job.data?.ownerId ?? null,
   });
 
   // Optionally set hostnames

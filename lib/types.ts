@@ -16,5 +16,5 @@ export type CreateClusterInput = {
   k8sVersion?: string | null;
 
   status?: 'pending' | 'creating' | 'ready' | 'failed' | 'deleted';
-  ownerId?: string | null;             // link to auth.users.id if you use RLS
+  // ownerId?: string | null;             // link to auth.users.id if you use RLS
 };

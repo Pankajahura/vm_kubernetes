@@ -30,7 +30,7 @@ export async function createClusterWorker(payload: CreateClusterInput) {
     k8s_version: payload.k8sVersion ?? null,
 
     status: payload.status ?? "pending",
-    owner_id: payload.ownerId ?? null,
+   // owner_id: payload.ownerId ?? null,
   };
 
   const { data, error } = await supabase

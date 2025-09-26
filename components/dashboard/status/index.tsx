@@ -61,8 +61,15 @@ export default function StatusClient({ clusterId }: { clusterId: string }) {
         verifyStatus: prev.verifyStatus || !!data.verifyStatus,
       }));
       setLastUpdated(new Date());
-    } catch (e: any) {
-      if (e?.name !== "AbortError") setError(e?.message || "Failed to fetch status.");
+    } catch (err: unknown) {
+      console.log(err, ".........98");
+       if (err instanceof Error) {
+        setError(err?.message || "Something went wrong while submitting.");
+       }
+       else{
+        setError( "Something went wrong while submitting.");
+       }
+      
     }
   }
 

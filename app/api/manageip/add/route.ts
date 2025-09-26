@@ -3,18 +3,18 @@ import { vmCreateSchema } from '@/lib/schema/vmSchema';
 import bcrypt from 'bcryptjs';
 import { createSSRClient } from '@/lib/supabase/server';
 
-async function getUserIdOr401() {
-  const supabase = await createSSRClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return { userId: null as string | null, response: NextResponse.json({ error: 'Not authenticated' }, { status: 401 }) };
-  }
-  return { userId: user.id, response: null as any };
-}
+// async function getUserIdOr401() {
+//   const supabase = await createSSRClient();
+//   const { data: { user } } = await supabase.auth.getUser();
+//   if (!user) {
+//     return { userId: null as string | null, response: NextResponse.json({ error: 'Not authenticated' }, { status: 401 }) };
+//   }
+//   return { userId: user.id, response: null };
+// }
 
 export async function POST(req: NextRequest) {
   // Require auth
-  const auth = await getUserIdOr401();
+  //const auth = await getUserIdOr401();
   //if (auth.response) return auth.response;
 
   try {
@@ -52,9 +52,13 @@ export async function POST(req: NextRequest) {
         storage: data.storage,
       createdAt: data.created_at,
     }, { status: 201 });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message ?? 'Invalid payload' }, { status: 400 });
+  } catch (err: unknown) {
+  if (err instanceof Error) {
+    return NextResponse.json({ error: err.message ?? 'Invalid request' }, { status: 400 });
+  } else {
+    return NextResponse.json({ error: 'Unknown error occurred' }, { status: 400 });
   }
+}
 }
 
 

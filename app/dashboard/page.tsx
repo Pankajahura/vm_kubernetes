@@ -93,7 +93,7 @@ export default function NewClusterPage() {
       //   },
       //   ips:["attach free ips here as well. only ip no password..."]
       // }
-      let payload = await buildPayloadWithFreeIps({
+      const payload = await buildPayloadWithFreeIps({
         name: data.name,
         location: data.location,
         version: data.version,
@@ -112,7 +112,7 @@ export default function NewClusterPage() {
       //once cluster is build , update the ip with in_use status.
       console.log(payload, "..........................69");
 
-      let response = await api.post("/clusters", payload.payload);
+      const response = await api.post("/clusters", payload.payload);
 
       console.log(response.data, "..........response.data.........98");
 
@@ -129,9 +129,15 @@ export default function NewClusterPage() {
       }
 
       // await new Promise((r) => setTimeout(r, 600)); // simulate latency
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.log(err, ".........98");
-      setError(err?.message || "Something went wrong while submitting.");
+       if (err instanceof Error) {
+        setError(err?.message || "Something went wrong while submitting.");
+       }
+       else{
+        setError( "Something went wrong while submitting.");
+       }
+      
     } finally {
       setSubmitting(false);
     }

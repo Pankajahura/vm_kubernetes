@@ -5,6 +5,13 @@ import type { CreateClusterInput } from "../types";
 type Phase = "create" | "connect" | "verify";
 type Status = "pending" | "creating" | "ready" | "failed" | "deleted";
 
+interface NodeConfig {
+  // Define the expected properties and their types
+  ram: number;
+  cpu: number;
+  storage: number;  // Optional field
+}
+
 const supabase = createSb(
   process.env.NEXT_PUBLIC_SUPABASE_URL!, // or SUPABASE_URL
   process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!, // service role for server-side writes
@@ -55,7 +62,7 @@ export async function updateClusterPhaseWorker(params: {
     control_plane: string | null;
     workers: string[];
     kubeconfig: string | null;
-    node_config: Record<string, any> | null;
+    node_config: NodeConfig | null;
     cni_plugin: string | null;
     k8s_version: string | null;
   }>;
@@ -71,7 +78,7 @@ export async function updateClusterPhaseWorker(params: {
     verify: "verify_status",
   };
 
-  const patch: Record<string, any> = {
+  const patch: any = {
     [fieldMap[phase]]: value,
     ...extras,
   };

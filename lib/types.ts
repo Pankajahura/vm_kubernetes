@@ -1,4 +1,10 @@
 // types.ts
+interface NodeConfig {
+  // Define the expected properties and their types
+  ram: number;
+  cpu: number;
+  storage: number;  // Optional field
+}
 export type CreateClusterInput = {
   clusterId: string;
   clusterName: string;
@@ -10,7 +16,7 @@ export type CreateClusterInput = {
   verifyStatus?: boolean;
 
   kubeConfig?: string | null;          // kubeconfig YAML
-  nodeConfig?: Record<string, any> | null; // {region, plan, cpu, ram, disk ...}
+  nodeConfig?: NodeConfig | null; // {region, plan, cpu, ram, disk ...}
 
   cniPlugin?: 'flannel' | 'calico' | 'cilium' | string | null;
   k8sVersion?: string | null;

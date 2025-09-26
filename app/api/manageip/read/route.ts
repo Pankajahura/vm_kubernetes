@@ -1,19 +1,19 @@
 import { vmFetchSchema } from "@/lib/schema/vmSchema";
-import { createClient } from "@/lib/supabase/server";
+import { createSSRClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
 
-async function getUserIdOr401() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return { userId: null as string | null, response: NextResponse.json({ error: 'Not authenticated' }, { status: 401 }) };
-  }
-  return { userId: user.id, response: null as any };
-}
+// async function getUserIdOr401() {
+//   const supabase = await createSSRClient();
+//   const { data: { user } } = await supabase.auth.getUser();
+//   if (!user) {
+//     return { userId: null as string | null, response: NextResponse.json({ error: 'Not authenticated' }, { status: 401 }) };
+//   }
+//   return { userId: user.id, response: null};
+// }
 
 export async function GET(req: NextRequest) {
-  const auth = await getUserIdOr401();
+ // const auth = await getUserIdOr401();
  // if (auth.response) return auth.response;
 
   try {
@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
 
     const parsed = vmFetchSchema.parse({ location, number,ram,cpu,storage});
 
-    const supabase = await createClient();
+    const supabase = await createSSRClient();
 
     
     const { data, error } = await supabase
@@ -59,7 +59,11 @@ export async function GET(req: NextRequest) {
         createdAt: r.created_at,
       }))
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
+     if (err instanceof Error) {
     return NextResponse.json({ error: err.message ?? 'Invalid request' }, { status: 400 });
+  } else {
+    return NextResponse.json({ error: 'Unknown error occurred' }, { status: 400 });
+  }
   }
 }

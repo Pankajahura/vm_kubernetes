@@ -1,13 +1,15 @@
 import StatusClient from "@/components/dashboard/status";
-
+type Params = { clientId: string };
 // app/dashboard/[clusterId]/status/page.tsx
 export default async function Page({
   params,
 }: {
-  params: { clientId: string };
+  params: Promise<Params>;
 }) {
-  const clusterId =  decodeURIComponent(params.clientId);
-  console.log(params.clientId,"...............clusterId");
+
+     const { clientId } = await params;   
+  const clusterId =  decodeURIComponent(clientId);
+  console.log(clientId,"...............clusterId");
 
   return (
     <main className="p-6">

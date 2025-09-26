@@ -2,10 +2,11 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import axios, { AxiosResponse } from 'axios';
+// import axios, { AxiosResponse } from "axios";
 import { buildPayloadWithFreeIps } from "@/lib/supabase/vms";
 import api from "@/lib/axios/axios";
 import { places } from "@/utils";
+import { useRouter } from "next/navigation";
 
 type Location = "mumbai" | "bangalore" | "noida";
 type Version = "1.31.1";
@@ -13,15 +14,30 @@ type PlanId = "nano" | "micro" | "small";
 
 const NODE_PLANS: Record<
   PlanId,
-  { label: string; ram: number; cpu: number; storage: number}
+  { label: string; ram: number; cpu: number; storage: number }
 > = {
-  nano: { label: "Nano • 1GB RAM • 1 vCPU • 27GB SSD", ram: 1, cpu: 1, storage: 27 },
-  micro: { label: "Micro • 1GB RAM • 1 vCPU • 27GB SSD", ram: 1, cpu: 1, storage: 27 },
-  small: { label: "Small • 4GB RAM • 2 vCPU • 27GB SSD", ram: 4, cpu: 2, storage: 27 },
-  
+  nano: {
+    label: "Nano • 1GB RAM • 1 vCPU • 27GB SSD",
+    ram: 1,
+    cpu: 1,
+    storage: 27,
+  },
+  micro: {
+    label: "Micro • 1GB RAM • 1 vCPU • 27GB SSD",
+    ram: 1,
+    cpu: 1,
+    storage: 27,
+  },
+  small: {
+    label: "Small • 4GB RAM • 2 vCPU • 27GB SSD",
+    ram: 4,
+    cpu: 2,
+    storage: 27,
+  },
 };
 
 export default function NewClusterPage() {
+  const router = useRouter();
   const [name, setName] = useState("");
   const [location, setLocation] = useState<Location>("mumbai");
   const [nodes, setNodes] = useState<number>(1);
@@ -66,55 +82,55 @@ export default function NewClusterPage() {
       //if free ip, then attach it in the payload.
       //otherwise show error message.
 
-//      let payload= {
-//   provider: "existing",
-//   cluster: { name: data.name, location: data.location, pod_cidr: "10.244.0.0/16", k8s_minor: data.version },
-//   auth: { method: "password", user: "root", password: "luV5DivOV98g" },
-//   nodes: {
-//     "cp-1": { host: "172.104.206.68", role: "control-plane", hostname: "cp-1", cpu: data.planDetails.cpu, memory_mb: data.planDetails.ram },
-//     "wp-1": { host: "45.79.124.101", role: "worker", hostname: "wp-1", cpu: data.planDetails.cpu, memory_mb: data.planDetails.ram },
-//     "wp-2": { host: "172.105.52.85", role: "worker", hostname: "wp-2", cpu: data.planDetails.cpu, memory_mb: data.planDetails.ram }
-//   },
-//   ips:["attach free ips here as well. only ip no password..."]
-// }
-  let payload=await buildPayloadWithFreeIps({name:data.name,location:data.location,version:data.version,planDetails:data.planDetails,nodes:data.nodes});
-  console.log(payload,"...................67");
+      //      let payload= {
+      //   provider: "existing",
+      //   cluster: { name: data.name, location: data.location, pod_cidr: "10.244.0.0/16", k8s_minor: data.version },
+      //   auth: { method: "password", user: "root", password: "luV5DivOV98g" },
+      //   nodes: {
+      //     "cp-1": { host: "172.104.206.68", role: "control-plane", hostname: "cp-1", cpu: data.planDetails.cpu, memory_mb: data.planDetails.ram },
+      //     "wp-1": { host: "45.79.124.101", role: "worker", hostname: "wp-1", cpu: data.planDetails.cpu, memory_mb: data.planDetails.ram },
+      //     "wp-2": { host: "172.105.52.85", role: "worker", hostname: "wp-2", cpu: data.planDetails.cpu, memory_mb: data.planDetails.ram }
+      //   },
+      //   ips:["attach free ips here as well. only ip no password..."]
+      // }
+      let payload = await buildPayloadWithFreeIps({
+        name: data.name,
+        location: data.location,
+        version: data.version,
+        planDetails: data.planDetails,
+        nodes: data.nodes,
+      });
+      console.log(payload, "...................67");
 
-  if(payload.success===false){
-    setOkMsg(payload.error
-       || "Something went wrong while fetching free IPs.");
-    return;
-  }
+      if (payload.success === false) {
+        setOkMsg(
+          payload.error || "Something went wrong while fetching free IPs."
+        );
+        return;
+      }
 
-  
-   
+      //once cluster is build , update the ip with in_use status.
+      console.log(payload, "..........................69");
 
-//once cluster is build , update the ip with in_use status.
-console.log(payload,"..........................69");
+      let response = await api.post("/clusters", payload.payload);
 
+      console.log(response.data, "..........response.data.........98");
 
-let response =await api.post('/clusters',payload.payload);
-
-
-
-  if(response.status==200){
-    alert('your cluster is being created. please wait for some time.......', );
-     setOkMsg("Cluster request captured. Check console for payload.");
-  }
-
-
-
-
-
- 
-
-
-
+      if (response.status == 200) {
+        alert(
+          "your cluster is being created. please wait for some time......."
+        );
+        setOkMsg("Cluster request captured. Check console for payload.");
+        //navigate to status page.
+        // window.location.href=`/dashboard/${response.data.clusterId}/status`;
+        router.push(
+          `/dashboard/${encodeURIComponent(response.data.clusterId)}/status`
+        );
+      }
 
       // await new Promise((r) => setTimeout(r, 600)); // simulate latency
-     
     } catch (err: any) {
-      console.log(err,".........98")
+      console.log(err, ".........98");
       setError(err?.message || "Something went wrong while submitting.");
     } finally {
       setSubmitting(false);
@@ -126,9 +142,12 @@ let response =await api.post('/clusters',payload.payload);
       <div className="mx-auto max-w-3xl">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl font-semibold text-slate-900">Create Kubernetes Cluster</h1>
+          <h1 className="text-2xl font-semibold text-slate-900">
+            Create Kubernetes Cluster
+          </h1>
           <p className="text-sm text-slate-600 mt-1">
-            Fill the form to provision a new cluster. You can tweak size and region anytime before launch.
+            Fill the form to provision a new cluster. You can tweak size and
+            region anytime before launch.
           </p>
         </div>
 
@@ -137,7 +156,10 @@ let response =await api.post('/clusters',payload.payload);
           <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6">
             {/* Cluster Name */}
             <div className="space-y-2">
-              <label htmlFor="name" className="block text-sm font-medium text-slate-800">
+              <label
+                htmlFor="name"
+                className="block text-sm font-medium text-slate-800"
+              >
                 Cluster name
               </label>
               <input
@@ -148,14 +170,19 @@ let response =await api.post('/clusters',payload.payload);
                 placeholder="e.g., prod-observability"
                 className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
-              <p className="text-xs text-slate-500">Letters, numbers, and dashes only are recommended.</p>
+              <p className="text-xs text-slate-500">
+                Letters, numbers, and dashes only are recommended.
+              </p>
             </div>
 
             {/* Grid: location, nodes, version */}
             <div className="grid gap-6 md:grid-cols-3">
               {/* Location */}
               <div className="space-y-2">
-                <label htmlFor="location" className="block text-sm font-medium text-slate-800">
+                <label
+                  htmlFor="location"
+                  className="block text-sm font-medium text-slate-800"
+                >
                   Location
                 </label>
                 <select
@@ -169,13 +196,19 @@ let response =await api.post('/clusters',payload.payload);
                   <option value="bangalore">Bangalore</option>
                   <option value="germany">Germany</option>
                   <option value="toronto">Toronto</option> */}
-                  {places.map((place)=><option value={place} key={place}>{place.charAt(0).toUpperCase()+place.slice(1)}</option>)}
+                  {places.map((place) => (
+                    <option value={place} key={place}>
+                      {place.charAt(0).toUpperCase() + place.slice(1)}
+                    </option>
+                  ))}
                 </select>
               </div>
 
               {/* Nodes with + / - */}
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-slate-800">Number of nodes</label>
+                <label className="block text-sm font-medium text-slate-800">
+                  Number of nodes
+                </label>
                 <div className="flex items-stretch rounded-xl border border-slate-300 overflow-hidden">
                   <button
                     type="button"
@@ -211,7 +244,10 @@ let response =await api.post('/clusters',payload.payload);
 
               {/* Version */}
               <div className="space-y-2">
-                <label htmlFor="version" className="block text-sm font-medium text-slate-800">
+                <label
+                  htmlFor="version"
+                  className="block text-sm font-medium text-slate-800"
+                >
                   Kubernetes version
                 </label>
                 <select
@@ -228,7 +264,10 @@ let response =await api.post('/clusters',payload.payload);
 
             {/* Node Plan */}
             <div className="space-y-2">
-              <label htmlFor="plan" className="block text-sm font-medium text-slate-800">
+              <label
+                htmlFor="plan"
+                className="block text-sm font-medium text-slate-800"
+              >
                 Node plan
               </label>
               <select
@@ -245,7 +284,8 @@ let response =await api.post('/clusters',payload.payload);
                 ))}
               </select>
               <div className="text-xs text-slate-600">
-                <span className="font-medium">Selected:</span> {planMeta.ram} RAM • {planMeta.cpu} vCPU • {planMeta.storage} storage
+                <span className="font-medium">Selected:</span> {planMeta.ram}{" "}
+                RAM • {planMeta.cpu} vCPU • {planMeta.storage} storage
               </div>
             </div>
 
@@ -268,7 +308,8 @@ let response =await api.post('/clusters',payload.payload);
 
         {/* Small note */}
         <p className="mt-4 text-xs text-slate-500">
-          On submit, the data is validated client-side and logged to the console. Replace the submit block with your API call.
+          On submit, the data is validated client-side and logged to the
+          console. Replace the submit block with your API call.
         </p>
       </div>
     </div>
@@ -277,27 +318,9 @@ let response =await api.post('/clusters',payload.payload);
 
 // app/dashboard/page.tsx
 
-
-
-
 // import NewClusterForm from "@/components/dashboard/page";
 // import { createClusterAction } from "@/lib/actions/dashboard";
 
 // export default function Page() {
 //   return <NewClusterForm action={createClusterAction} />;
 // }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -140,3 +140,7 @@ export async function fetchKubeconfig(
   await fs.mkdir(path.dirname(destPath), { recursive: true });
   await fs.writeFile(destPath, stdout, { mode: 0o600 });
 }
+
+
+//promithus - graphana.
+//real time feature in supabase 

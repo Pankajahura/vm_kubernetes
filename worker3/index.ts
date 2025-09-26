@@ -735,7 +735,7 @@ kubectl taint nodes -l "kubernetes.io/hostname=${"${HN}"}" node-role.kubernetes.
   //   });
   // }
 
-  // return { ok: true, kubeconfigPath: kubePath, controlPlane: cp.host, nodes: data.nodes };
+   return { ok: true, kubeconfigPath: kubePath, controlPlane: cp.host, nodes: data.nodes };
 };
 
 // ---------- Start worker ----------

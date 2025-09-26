@@ -48,6 +48,7 @@ export async function POST(req: Request) {
 
   const clusterId = crypto.randomUUID();
   const job = await provisionQueue.add("provision", { clusterId, ...parsed.data });
+  console.log(job,"...............job")
 
   return NextResponse.json({ clusterId, jobId: job.id, status: "QUEUED" });
 }

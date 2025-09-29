@@ -11,6 +11,8 @@ import {
   updateClusterPhaseWorker,
 } from "../lib/supabase/cluster";
 
+import crypto from "node:crypto";
+
 const execFileAsync = promisify(execFile);
 // ---------- ENV ----------
 const REDIS_URL = process.env.REDIS_URL!;
@@ -734,6 +736,11 @@ kubectl taint nodes -l "kubernetes.io/hostname=${"${HN}"}" node-role.kubernetes.
   //     "topology.kubernetes.io/region": data.cluster.location,
   //   });
   // }
+
+  const buf = await fs.readFile(kubePath);
+  const sha256 = crypto.createHash("sha256").update(buf).digest("hex");
+
+  console.log("kubecofig.......",kubePath,".........kubecofig file buf :", buf, ".....sha256:", sha256);
 
    return { ok: true, kubeconfigPath: kubePath, controlPlane: cp.host, nodes: data.nodes };
 };

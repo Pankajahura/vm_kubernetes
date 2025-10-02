@@ -9,6 +9,7 @@ import { updateVmByIps } from "../lib/supabase/vms";
 import {
   createClusterWorker,
   updateClusterPhaseWorker,
+  updateClusterWorker,
 } from "../lib/supabase/cluster";
 
 import crypto from "node:crypto";
@@ -738,9 +739,13 @@ kubectl taint nodes -l "kubernetes.io/hostname=${"${HN}"}" node-role.kubernetes.
   // }
 
   const buf = await fs.readFile(kubePath);
-  const sha256 = crypto.createHash("sha256").update(buf).digest("hex");
+   await updateClusterWorker({
+    clusterId: clusterId as string,
+    kubeConfig: buf as Buffer,
+  });
+ // const sha256 = crypto.createHash("sha256").update(buf).digest("hex");
 
-  console.log("kubecofig.......",kubePath,".........kubecofig file buf :", buf, ".....sha256:", sha256);
+ // console.log("kubecofig.......",kubePath,".........kubecofig file buf :", buf, ".....sha256:", sha256);
 
    return { ok: true, kubeconfigPath: kubePath, controlPlane: cp.host, nodes: data.nodes };
 };

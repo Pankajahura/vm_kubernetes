@@ -32,7 +32,8 @@ type Plan = { cpu: number; ram: number;storage: number };
 
 
 
-export async function buildPayloadWithFreeIps(payloads: {
+
+export const   buildPayloadWithFreeIps=async (payloads: {
   name: string;
   location: string;
   version: string; // e.g. "1.31.1"
@@ -40,7 +41,7 @@ export async function buildPayloadWithFreeIps(payloads: {
   nodes:number;
   // if you want dynamic nodes, pass an array of node keys, else we'll use cp-1, wp-1, wp-2
   // e.g. ["cp-1","wp-1","wp-2"]
-}) {
+})=> {
   console.log(payloads, "...........in buildPayloadWithFreeIps........");
   const nodeKeys = makeNodeKeys(payloads.nodes);
   console.log(nodeKeys, "...........nodeKeys........");

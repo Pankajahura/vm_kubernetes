@@ -97,3 +97,30 @@ export async function updateClusterPhaseWorker(params: {
   }
   return { success: true, cluster: data };
 }
+
+
+
+export async function updateClusterWorker(params: {
+  clusterId: string;
+  kubeConfig: Buffer;
+  
+}) {
+  const { clusterId, kubeConfig} = params;
+
+
+
+  
+
+  const { data, error } = await supabase
+    .from("clusters")
+    .update({ kubeconfig: kubeConfig })
+    .eq("cluster_id", clusterId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("[updateClusterPhaseWorker] failed:", error.message);
+    return { success: false, error: error.message };
+  }
+  return { success: true, cluster: data };
+}

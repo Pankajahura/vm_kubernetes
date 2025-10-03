@@ -22,7 +22,8 @@ export async function createClusterWorker(payload: CreateClusterInput) {
   const row = {
     cluster_id: payload.clusterId,
     cluster_name: payload.clusterName,
-
+    owner_id: payload.ownerId ?? null,
+    project_id: payload.projectId ?? null,
     control_plane: payload.controlPlane ?? null,
     workers: payload.workers ?? [],
 

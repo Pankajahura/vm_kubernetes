@@ -586,6 +586,8 @@ const processor = async (job: Job) => {
 
   await createClusterWorker({
     clusterId: clusterId,
+    ownerId:job.data?.ownerId ?? null,
+    projectId:job.data?.projectId ?? null,
     clusterName: job.data?.cluster?.name ?? `cluster-${job.id}`,
     controlPlane: job.data?.ips[0] ?? null,
     workers: job.data?.ips.slice(1) ?? [],

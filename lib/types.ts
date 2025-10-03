@@ -8,7 +8,8 @@ interface NodeConfig {
 export type CreateClusterInput = {
   clusterId: string;
   clusterName: string;
-
+  ownerId?: string | null;             // link to auth.users.id if you use RLS
+  projectId?: string | null;           // link to projects.id if you have a projects table
   controlPlane?: string | null;        // e.g., API VIP or CP-1 IP
   workers?: string[];                  // list of worker IPs/hosts
   createStatus?: boolean;
